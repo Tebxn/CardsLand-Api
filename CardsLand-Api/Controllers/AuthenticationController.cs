@@ -1,5 +1,10 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using CardsLand_Api.Entities;
+using CardsLand_Api.Interfaces;
+using Dapper;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.Data.SqlClient;
+using System.Data;
 
 namespace CardsLand_Api.Controllers
 {
@@ -7,6 +12,221 @@ namespace CardsLand_Api.Controllers
     [ApiController]
     public class AuthenticationController : ControllerBase
     {
+        private readonly IDbConnectionProvider _connectionProvider;
+        private readonly ITools _tools;
 
+        public AuthenticationController(IDbConnectionProvider connectionProvider, ITools tools)
+        {
+            _connectionProvider = connectionProvider;
+            _tools = tools;
+        }
+
+        [HttpPost]
+        [Route("Login")]
+        public async Task<IActionResult> Login(UserEnt entity)
+        {
+            ApiResponse<UserEnt> response = new ApiResponse<UserEnt>();
+
+            try
+            {
+                if (string.IsNullOrEmpty(entity.User_Email) || string.IsNullOrEmpty(entity.User_Password))
+                {
+                    response.ErrorMessage = "Email and password are required";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
+
+                using (var connection = _connectionProvider.GetConnection())
+                {
+                    var data = await connection.QueryFirstOrDefaultAsync<UserEnt>("Login",
+                        new { entity.User_Email, entity.User_Password },
+                        commandType: CommandType.StoredProcedure);
+
+                    if (data == null)
+                    {
+                        response.ErrorMessage = "Incorrect email or password";
+                        response.Code = 404;
+                        return NotFound(response);
+                    }
+
+                    response.Success = true;
+                    response.Data = data;
+                    return Ok(response);
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPost]
+        [Route("RegisterAccount")]
+        public async Task<IActionResult> RegisterAccount(UserEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+
+            try
+            {
+                if (string.IsNullOrEmpty(entity.User_Name) || string.IsNullOrEmpty(entity.User_LastName) || string.IsNullOrEmpty(entity.User_Email))
+                {
+                    response.ErrorMessage = "Name, lastname, and email are required.";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
+
+                entity.User_Password = _tools.CreatePassword(8);
+
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.ExecuteAsync("RegisterAccount",
+                        new { entity.User_Name, entity.User_LastName, entity.User_Email, entity.User_Password, entity.User_Type, entity.User_State, entity.User_Company_Id },
+                        commandType: CommandType.StoredProcedure);
+
+                    if (data != 0)
+                    {
+                        string body = "Your new password to access PokeLand is: " + entity.User_Password +
+                            "\nPlease log in with your new password and change it.";
+                        string recipient = entity.User_Email;
+                        _tools.SendEmail(recipient, "PokeLand Recover Account", body);
+
+                        response.Success = true;
+                        response.Code = 200;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Error Sending email";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPost]
+        [Route("RecoverAccount")]
+        public async Task<IActionResult> RecoverAccount(UserEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+
+            try
+            {
+                if (string.IsNullOrEmpty(entity.User_Email))
+                {
+                    response.ErrorMessage = "Email is required.";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
+
+                string temporalPassword = _tools.CreatePassword(8);
+
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.QueryFirstOrDefaultAsync<UserEnt>("RecoverAccount",
+                        new { entity.User_Email, TemporalPassword = temporalPassword },
+                        commandType: CommandType.StoredProcedure);
+
+                    if (data != null)
+                    {
+                        string body = "Your new password to access PokeLand is: " + temporalPassword +
+                            "\nPlease log in with your new password and change it.";
+                        string recipient = entity.User_Email;
+                        _tools.SendEmail(recipient, "PokeLand Recover Account", body);
+
+                        response.Success = true;
+                        response.Code = 200;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Error Sending email";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPut]
+        [Route("DisableAccount")]
+        public async Task<IActionResult> DisableAccount(UserEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+
+            try
+            {
+                if (entity.User_Id == 0)
+                {
+                    response.ErrorMessage = "User_Id can't be empty.";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
+
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.QueryFirstOrDefaultAsync<UserEnt>("DisableAccount",
+                        new { entity.User_Id },
+                        commandType: CommandType.StoredProcedure);
+
+                    response.Success = true;
+                    response.Code = 200;
+                    return Ok(response);
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPut]
+        [Route("ActivateAccount")]
+        public async Task<IActionResult> ActivateAccount(UserEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+
+            try
+            {
+                if (entity.User_Id == 0)
+                {
+                    response.ErrorMessage = "User_Id can't be empty.";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
+
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.QueryFirstOrDefaultAsync<UserEnt>("ActivatedAccount",
+                        new { entity.User_Id },
+                        commandType: CommandType.StoredProcedure);
+
+                    response.Success = true;
+                    response.Code = 200;
+                    return Ok(response);
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
     }
 }
