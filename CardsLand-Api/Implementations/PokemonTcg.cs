@@ -10,22 +10,20 @@ namespace CardsLand_Api.Implementations
     {
         readonly PokemonApiClient pokeClient = new PokemonApiClient("6c488163-f020-49f7-829c-3bdb02c474f7");
 
-        public async Task<ApiResourceList<PokemonCard>> GetAllCards()
+        public async Task<ApiResourceList<Card>> GetAllCards()
         {
             var filter = PokemonFilterBuilder.CreatePokemonFilter()
-            .AddName("Darkrai")
-            .AddName("Pikachu")
             .AddSetName("Base");
-            var cards = await pokeClient.GetApiResourceAsync<PokemonCard>(filter);
+            var cards = await pokeClient.GetApiResourceAsync<Card>(filter);
             return cards;
         }
 
-        public async Task<ApiResourceList<PokemonCard>> GetSpecificCardbyName(string pokemonName)
+        public async Task<ApiResourceList<Card>> GetSpecificCardbyName(string pokemonCardName)
         {
             var filter = PokemonFilterBuilder.CreatePokemonFilter()
-            .AddName(pokemonName)
+            .AddName(pokemonCardName)
             .AddSetName("Base");
-            var cards = await pokeClient.GetApiResourceAsync<PokemonCard>(filter);
+            var cards = await pokeClient.GetApiResourceAsync<Card>(filter);
             return cards;
         }
     }

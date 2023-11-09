@@ -5,7 +5,7 @@ namespace CardsLand_Api.Interfaces
 {
     public interface IPokemonTcg
     {
-        Task<ApiResourceList<PokemonCard>> GetAllCards();
-        Task<ApiResourceList<PokemonCard>> GetSpecificCardbyName(string pokemonName);
+        Task<ApiResourceList<Card>> GetAllCards();
+        Task<ApiResourceList<Card>> GetSpecificCardbyName(string pokemonCardName);
     }
 }

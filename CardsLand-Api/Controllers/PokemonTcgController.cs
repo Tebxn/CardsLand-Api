@@ -26,7 +26,7 @@ namespace CardsLand_Api.Controllers
         [Route("GetAllCards")]
         public async Task<IActionResult> GetAllCards()
         {
-            ApiResponse<ApiResourceList<PokemonCard>> response = new ApiResponse<ApiResourceList<PokemonCard>>();
+            ApiResponse<ApiResourceList<Card>> response = new ApiResponse<ApiResourceList<Card>>();
 
             try
             {
@@ -43,13 +43,13 @@ namespace CardsLand_Api.Controllers
 
         [HttpGet]
         [Route("GetSpecificCardbyName")]
-        public async Task<IActionResult> GetSpecificCardbyName(string cardName)
+        public async Task<IActionResult> GetSpecificCardbyName(string pokemonCardName)
         {
-            ApiResponse<ApiResourceList<PokemonCard>> response = new ApiResponse<ApiResourceList<PokemonCard>>();
+            ApiResponse<ApiResourceList<Card>> response = new ApiResponse<ApiResourceList<Card>>();
 
             try
             {
-                response.Data = await _pokemonTcg.GetSpecificCardbyName(cardName);
+                response.Data = await _pokemonTcg.GetSpecificCardbyName(pokemonCardName);
                 return Ok(response);
             }
             catch (SqlException ex)
