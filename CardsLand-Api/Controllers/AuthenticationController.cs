@@ -69,28 +69,23 @@ namespace CardsLand_Api.Controllers
 
             try
             {
-                if (string.IsNullOrEmpty(entity.User_Name) || string.IsNullOrEmpty(entity.User_LastName) || string.IsNullOrEmpty(entity.User_Email))
+                if (string.IsNullOrEmpty(entity.User_Nickname) || string.IsNullOrEmpty(entity.User_Password) || string.IsNullOrEmpty(entity.User_Email))
                 {
-                    response.ErrorMessage = "Name, lastname, and email are required.";
+                    response.ErrorMessage = "Nickname, Password, and Email are required.";
                     response.Code = 400;
                     return BadRequest(response);
                 }
 
-                entity.User_Password = _tools.CreatePassword(8);
+                //entity.User_Password = _tools.CreatePassword(8);
 
                 using (var context = _connectionProvider.GetConnection())
                 {
                     var data = await context.ExecuteAsync("RegisterAccount",
-                        new { entity.User_Name, entity.User_LastName, entity.User_Email, entity.User_Password, entity.User_Type, entity.User_State, entity.User_Company_Id },
+                        new { entity.User_Nickname, entity.User_Password, entity.User_Email},
                         commandType: CommandType.StoredProcedure);
 
                     if (data != 0)
                     {
-                        string body = "Your new password to access PokeLand is: " + entity.User_Password +
-                            "\nPlease log in with your new password and change it.";
-                        string recipient = entity.User_Email;
-                        _tools.SendEmail(recipient, "PokeLand Recover Account", body);
-
                         response.Success = true;
                         response.Code = 200;
                         return Ok(response);

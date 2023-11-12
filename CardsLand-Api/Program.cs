@@ -10,6 +10,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddScoped<IPokemonTcg, PokemonTcg>();
+builder.Services.AddScoped<IDbConnectionProvider, DbConnectionProvider>();
+builder.Services.AddScoped<ITools, Tools>();
 
 builder.Services.AddSwaggerGen();
 
