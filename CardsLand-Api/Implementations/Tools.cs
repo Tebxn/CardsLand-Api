@@ -13,13 +13,12 @@ namespace CardsLand_Api.Implementations
     public class Tools : ITools
     {
         private readonly IConfiguration _configuration;
-        private readonly IBCryptHelper _bCryptHelper;
+
         private IHostEnvironment _hostingEnvironment;
 
-        public Tools(IConfiguration configuration, IBCryptHelper bCryptHelper, IHostEnvironment hostingEnvironment)
+        public Tools(IConfiguration configuration, IHostEnvironment hostingEnvironment)
         {
             _configuration = configuration;
-            _bCryptHelper = bCryptHelper;
             _hostingEnvironment = hostingEnvironment;
         }
 
@@ -152,6 +151,17 @@ namespace CardsLand_Api.Implementations
             {
                 return "Error";
             }
+        }
+
+        public bool CheckPassword(string password, string hashedPassword)
+        {
+            if (string.IsNullOrEmpty(password))
+            {
+                return false;
+            }
+            var unHashedPassword = Decrypt(hashedPassword);
+            bool validPassword = password == unHashedPassword ? true : false;
+            return validPassword;
         }
     }
 }

@@ -8,5 +8,6 @@
         string Encrypt(string texto);
         string GenerateToken(string userId);
         string MakeHtmlNewUser(string nickname, string activationCode);
+        bool CheckPassword(string password, string hashedPassword);
     }
 }

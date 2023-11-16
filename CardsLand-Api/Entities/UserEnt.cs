@@ -10,6 +10,6 @@
         public bool User_State { get; set; }
         public string? User_Activation_Code { get; set; }
         public bool User_Need_AC { get; set; }
-        public string UserToken { get; set; }
+        public string? UserToken { get; set; }
     }
 }
