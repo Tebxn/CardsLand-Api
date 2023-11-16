@@ -23,7 +23,7 @@ namespace CardsLand_Api.Implementations
             _hostingEnvironment = hostingEnvironment;
         }
 
-        public string CreatePassword(int length)
+        public string GenerateRandomCode(int length)
         {
             const string valid = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
             StringBuilder res = new StringBuilder();
@@ -42,7 +42,7 @@ namespace CardsLand_Api.Implementations
                 var message = new MimeMessage();
                 string emailSender = _configuration["Email:SenderAddress"];
                 string emailSenderPassword = _configuration["Email:SenderPassword"];
-                message.From.Add(new MailboxAddress("Intelly TI Support", emailSender));
+                message.From.Add(new MailboxAddress("CardsLand", emailSender));
                 message.To.Add(new MailboxAddress("Recipient", recipient));
                 message.Subject = subject;
 
@@ -134,6 +134,23 @@ namespace CardsLand_Api.Implementations
                         }
                     }
                 }
+            }
+        }
+
+        public string MakeHtmlNewUser(string nickname, string activationCode)
+        {
+            try
+            {
+                string fileRoute = Path.Combine(_hostingEnvironment.ContentRootPath, "HtmlTemplates\\activationCode.html");
+                string htmlFile = System.IO.File.ReadAllText(fileRoute);
+                htmlFile = htmlFile.Replace("@@nickname", nickname);
+                htmlFile = htmlFile.Replace("@@activationCode", activationCode);
+
+                return htmlFile;
+            }
+            catch (Exception ex)
+            {
+                return "Error";
             }
         }
     }

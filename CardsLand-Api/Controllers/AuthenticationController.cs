@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
+using CardsLand_Api.Implementations;
 
 namespace CardsLand_Api.Controllers
 {
@@ -15,11 +16,13 @@ namespace CardsLand_Api.Controllers
     {
         private readonly IDbConnectionProvider _connectionProvider;
         private readonly ITools _tools;
+        private readonly IBCryptHelper _bCryptHelper;
 
-        public AuthenticationController(IDbConnectionProvider connectionProvider, ITools tools)
+        public AuthenticationController(IDbConnectionProvider connectionProvider, ITools tools, IBCryptHelper bCryptHelper)
         {
             _connectionProvider = connectionProvider;
             _tools = tools;
+            _bCryptHelper = bCryptHelper;
         }
 
         [HttpPost]
@@ -41,10 +44,13 @@ namespace CardsLand_Api.Controllers
                 using (var connection = _connectionProvider.GetConnection())
                 {
                     var data = await connection.QueryFirstOrDefaultAsync<UserEnt>("Login",
-                        new { entity.User_Email, entity.User_Password },
+                        new { entity.User_Email },
                         commandType: CommandType.StoredProcedure);
 
-                    if (data == null)
+                    //Check password
+                    bool validPassword = _bCryptHelper.CheckPassword(entity.User_Password, data.User_Password);
+
+                    if (data == null || !validPassword)
                     {
                         response.ErrorMessage = "Incorrect email or password";
                         response.Code = 404;
@@ -52,7 +58,9 @@ namespace CardsLand_Api.Controllers
                     }
 
                     response.Success = true;
+                    response.Code = 200;
                     response.Data = data;
+                    response.Data.UserToken = _tools.GenerateToken(data.User_Id.ToString());
                     return Ok(response);
                 }
             }
@@ -64,6 +72,7 @@ namespace CardsLand_Api.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [Route("RegisterAccount")]
         public async Task<IActionResult> RegisterAccount(UserEnt entity)
         {
@@ -71,30 +80,44 @@ namespace CardsLand_Api.Controllers
 
             try
             {
-                if (string.IsNullOrEmpty(entity.User_Nickname) || string.IsNullOrEmpty(entity.User_Password) || string.IsNullOrEmpty(entity.User_Email))
+                if (string.IsNullOrEmpty(entity.User_Nickname) || string.IsNullOrEmpty(entity.User_Password)|| string.IsNullOrEmpty(entity.User_Email))
                 {
-                    response.ErrorMessage = "Nickname, Password, and Email are required.";
+                    response.ErrorMessage = "Nickname, email and password are required.";
                     response.Code = 400;
                     return BadRequest(response);
                 }
 
-                //entity.User_Password = _tools.CreatePassword(8);
+                var User_Activation_Code = _tools.GenerateRandomCode(8);
+                entity.User_Password = _bCryptHelper.HashPassword(entity.User_Password);
 
                 using (var context = _connectionProvider.GetConnection())
                 {
-                    var data = await context.ExecuteAsync("RegisterAccount",
-                        new { entity.User_Nickname, entity.User_Password, entity.User_Email},
+                    string body = _tools.MakeHtmlNewUser(entity.User_Nickname, User_Activation_Code);
+                    string recipient = entity.User_Email;
+
+                    bool emailIsSend = _tools.SendEmail(recipient, "CardsLand", body);
+                    if (emailIsSend)
+                    {
+                        var data = await context.ExecuteAsync("RegisterAccount",
+                        new { entity.User_Nickname, entity.User_Email, entity.User_Password, User_Activation_Code},
                         commandType: CommandType.StoredProcedure);
 
-                    if (data != 0)
-                    {
-                        response.Success = true;
-                        response.Code = 200;
-                        return Ok(response);
+                        if (data != 0)
+                        {
+                            response.Success = true;
+                            response.Code = 200;
+                            return Ok(response);
+                        }
+                        else
+                        {
+                            response.ErrorMessage = "Email already exists";
+                            response.Code = 500;
+                            return BadRequest(response);
+                        }
                     }
                     else
                     {
-                        response.ErrorMessage = "Error Sending email";
+                        response.ErrorMessage = "Error Sending activation email";
                         response.Code = 500;
                         return BadRequest(response);
                     }
@@ -108,55 +131,55 @@ namespace CardsLand_Api.Controllers
             }
         }
 
-        [HttpPost]
-        [Route("RecoverAccount")]
-        public async Task<IActionResult> RecoverAccount(UserEnt entity)
-        {
-            ApiResponse<string> response = new ApiResponse<string>();
+        //[HttpPost]
+        //[Route("RecoverAccount")]
+        //public async Task<IActionResult> RecoverAccount(UserEnt entity)
+        //{
+        //    ApiResponse<string> response = new ApiResponse<string>();
 
-            try
-            {
-                if (string.IsNullOrEmpty(entity.User_Email))
-                {
-                    response.ErrorMessage = "Email is required.";
-                    response.Code = 400;
-                    return BadRequest(response);
-                }
+        //    try
+        //    {
+        //        if (string.IsNullOrEmpty(entity.User_Email))
+        //        {
+        //            response.ErrorMessage = "Email is required.";
+        //            response.Code = 400;
+        //            return BadRequest(response);
+        //        }
 
-                string temporalPassword = _tools.CreatePassword(8);
+        //        /string temporalPassword = _tools.CreatePassword(8);
 
-                using (var context = _connectionProvider.GetConnection())
-                {
-                    var data = await context.QueryFirstOrDefaultAsync<UserEnt>("RecoverAccount",
-                        new { entity.User_Email, TemporalPassword = temporalPassword },
-                        commandType: CommandType.StoredProcedure);
+        //        using (var context = _connectionProvider.GetConnection())
+        //        {
+        //            var data = await context.QueryFirstOrDefaultAsync<UserEnt>("RecoverAccount",
+        //                new { entity.User_Email, TemporalPassword = temporalPassword },
+        //                commandType: CommandType.StoredProcedure);
 
-                    if (data != null)
-                    {
-                        string body = "Your new password to access PokeLand is: " + temporalPassword +
-                            "\nPlease log in with your new password and change it.";
-                        string recipient = entity.User_Email;
-                        _tools.SendEmail(recipient, "PokeLand Recover Account", body);
+        //            if (data != null)
+        //            {
+        //                string body = "Your new password to access PokeLand is: " + temporalPassword +
+        //                    "\nPlease log in with your new password and change it.";
+        //                string recipient = entity.User_Email;
+        //                _tools.SendEmail(recipient, "PokeLand Recover Account", body);
 
-                        response.Success = true;
-                        response.Code = 200;
-                        return Ok(response);
-                    }
-                    else
-                    {
-                        response.ErrorMessage = "Error Sending email";
-                        response.Code = 500;
-                        return BadRequest(response);
-                    }
-                }
-            }
-            catch (SqlException ex)
-            {
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                response.Code = 500;
-                return BadRequest(response);
-            }
-        }
+        //                response.Success = true;
+        //                response.Code = 200;
+        //                return Ok(response);
+        //            }
+        //            else
+        //            {
+        //                response.ErrorMessage = "Error Sending email";
+        //                response.Code = 500;
+        //                return BadRequest(response);
+        //            }
+        //        }
+        //    }
+        //    catch (SqlException ex)
+        //    {
+        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
+        //        response.Code = 500;
+        //        return BadRequest(response);
+        //    }
+        //}
 
         [HttpPut]
         [Route("DisableAccount")]
