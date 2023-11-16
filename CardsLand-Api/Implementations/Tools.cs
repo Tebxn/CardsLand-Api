@@ -1,5 +1,6 @@
 ﻿using CardsLand_Api.Interfaces;
 using System.Net.Mail;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace CardsLand_Api.Implementations
@@ -29,6 +30,31 @@ namespace CardsLand_Api.Implementations
         {
             //Usar el metodo del profe
         }
+
+        public string Decrypt(string texto)
+        {
+            byte[] iv = new byte[16];
+            byte[] buffer = Convert.FromBase64String(texto);
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Encoding.UTF8.GetBytes("x3nbTRq6Jqec3lIZ");
+                aes.IV = iv;
+                ICryptoTransform decryptor = aes.CreateDecryptor(aes.Key, aes.IV);
+
+                using (MemoryStream memoryStream = new MemoryStream(buffer))
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, decryptor, CryptoStreamMode.Read))
+                    {
+                        using (StreamReader streamReader = new StreamReader((Stream)cryptoStream))
+                        {
+                            return streamReader.ReadToEnd();
+                        }
+                    }
+                }
+            }
+        }
+
     }
 }
 
