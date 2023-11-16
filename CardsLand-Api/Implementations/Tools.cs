@@ -1,17 +1,26 @@
-﻿using CardsLand_Api.Interfaces;
-using System.Net.Mail;
-using System.Security.Cryptography;
+﻿using CardsLand_Api.Entities;
+using CardsLand_Api.Interfaces;
+using MimeKit;
 using System.Text;
+using MailKit.Net.Smtp;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Security.Cryptography;
 
 namespace CardsLand_Api.Implementations
 {
     public class Tools : ITools
     {
         private readonly IConfiguration _configuration;
+        private readonly IBCryptHelper _bCryptHelper;
+        private IHostEnvironment _hostingEnvironment;
 
-        public Tools(IConfiguration configuration)
+        public Tools(IConfiguration configuration, IBCryptHelper bCryptHelper, IHostEnvironment hostingEnvironment)
         {
             _configuration = configuration;
+            _bCryptHelper = bCryptHelper;
+            _hostingEnvironment = hostingEnvironment;
         }
 
         public string CreatePassword(int length)
@@ -26,9 +35,82 @@ namespace CardsLand_Api.Implementations
             return res.ToString();
         }
 
-        public void SendEmail(string recipient, string subject, string body)
+        public bool SendEmail(string recipient, string subject, string body)
         {
-            //Usar el metodo del profe
+            try
+            {
+                var message = new MimeMessage();
+                string emailSender = _configuration["Email:SenderAddress"];
+                string emailSenderPassword = _configuration["Email:SenderPassword"];
+                message.From.Add(new MailboxAddress("Intelly TI Support", emailSender));
+                message.To.Add(new MailboxAddress("Recipient", recipient));
+                message.Subject = subject;
+
+                var bodyBuilder = new BodyBuilder();
+                bodyBuilder.HtmlBody = body;
+
+                message.Body = bodyBuilder.ToMessageBody();
+
+                using (var client = new SmtpClient())
+                {
+                    client.Connect("smtp.office365.com", 587, false);
+                    client.Authenticate(emailSender, emailSenderPassword);
+                    client.Send(message);
+                    client.Disconnect(true);
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+
+        public string GenerateToken(string userId)
+        {
+            List<Claim> claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.Name, Encrypt(userId))
+            };
+
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("8Tc2nR3QBamz1ipE3b9aYSiTPYoGXQsy"));
+            var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
+
+            var token = new JwtSecurityToken(
+                claims: claims,
+                expires: DateTime.UtcNow.AddMinutes(10),
+                signingCredentials: cred);
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public string Encrypt(string texto)
+        {
+            byte[] iv = new byte[16];
+            byte[] array;
+
+            using (Aes aes = Aes.Create())
+            {
+                aes.Key = Encoding.UTF8.GetBytes("x3nbTRq6Jqec3lIZ");
+                aes.IV = iv;
+
+                ICryptoTransform encryptor = aes.CreateEncryptor(aes.Key, aes.IV);
+
+                using (MemoryStream memoryStream = new MemoryStream())
+                {
+                    using (CryptoStream cryptoStream = new CryptoStream((Stream)memoryStream, encryptor, CryptoStreamMode.Write))
+                    {
+                        using (StreamWriter streamWriter = new StreamWriter((Stream)cryptoStream))
+                        {
+                            streamWriter.Write(texto);
+                        }
+
+                        array = memoryStream.ToArray();
+                    }
+                }
+            }
+            return Convert.ToBase64String(array);
         }
 
         public string Decrypt(string texto)
@@ -54,7 +136,7 @@ namespace CardsLand_Api.Implementations
                 }
             }
         }
-
     }
 }
+
 

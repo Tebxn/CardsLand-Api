@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using System.Data.SqlClient;
 using System.Data;
+using Microsoft.AspNetCore.Authorization;
 
 namespace CardsLand_Api.Controllers
 {
@@ -22,6 +23,7 @@ namespace CardsLand_Api.Controllers
         }
 
         [HttpPost]
+        [AllowAnonymous]
         [Route("Login")]
         public async Task<IActionResult> Login(UserEnt entity)
         {
