@@ -8,8 +8,11 @@ using CardsLand_Api.Interfaces;
 using Dapper;
 
 namespace CardsLand_Api.Controllers
+
 {
-    public class UserController : Controller
+	[Route("api/[controller]")]
+	[ApiController]
+	public class UserController : Controller
     {
         private readonly IDbConnectionProvider _connectionProvider;
         private readonly ITools _tools;
