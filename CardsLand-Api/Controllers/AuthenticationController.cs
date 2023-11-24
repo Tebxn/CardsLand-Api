@@ -56,7 +56,7 @@ namespace CardsLand_Api.Controllers
                     response.Code = 200;
                     response.Data = data;
                     response.Data.User_Password = "";
-                    response.Data.UserToken = _tools.GenerateToken(data.User_Id.ToString());
+                    response.Data.UserToken = _tools.GenerateToken(data.User_Id.ToString(), data.User_IsAdmin.ToString());
                     return Ok(response);
                 }
             }

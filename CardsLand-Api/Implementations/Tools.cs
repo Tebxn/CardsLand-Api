@@ -66,12 +66,11 @@ namespace CardsLand_Api.Implementations
         }
 
 
-        public string GenerateToken(string userId)
+        public string GenerateToken(string userId, string userIsAdmin)
         {
-            List<Claim> claims = new List<Claim>
-            {
-                new Claim(ClaimTypes.Name, Encrypt(userId))
-            };
+            List<Claim> claims = new List<Claim>();
+            claims.Add(new Claim("userId", Encrypt(userId)));
+            claims.Add(new Claim("userIsAdmin", Encrypt(userIsAdmin)));
 
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("8Tc2nR3QBamz1ipE3b9aYSiTPYoGXQsy"));
             var cred = new SigningCredentials(key, SecurityAlgorithms.HmacSha512Signature);
@@ -82,6 +81,21 @@ namespace CardsLand_Api.Implementations
                 signingCredentials: cred);
 
             return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+
+        public void ObtainClaims(IEnumerable<Claim> values, ref string userId, ref string userIsAdmin, ref bool isAdmin)
+        {
+            var claims = values.Select(Claim => new { Claim.Type, Claim.Value }).ToArray();
+            userId = Decrypt(claims.Where(x => x.Type == "userId").ToList().FirstOrDefault().Value);
+            userIsAdmin = Decrypt(claims.Where(x => x.Type == "userIsAdmin").ToList().FirstOrDefault().Value);
+
+            if (userIsAdmin == "true")
+                isAdmin = true;
+        }
+        public void ObtainClaimsID(IEnumerable<Claim> values, ref string userId)
+        {
+            var claims = values.Select(Claim => new { Claim.Type, Claim.Value }).ToArray();
+            userId = Decrypt(claims.Where(x => x.Type == "userId").ToList().FirstOrDefault().Value);
         }
 
         public string Encrypt(string texto)
