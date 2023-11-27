@@ -163,8 +163,7 @@ namespace CardsLand_Api.Controllers
                             entity.User_Id,
                             entity.User_Nickname,
                             entity.User_Email,
-                            entity.User_Password,
-                            //entity.User_Type
+                            entity.User_IsAdmin
                         },
                         commandType: CommandType.StoredProcedure);
 
