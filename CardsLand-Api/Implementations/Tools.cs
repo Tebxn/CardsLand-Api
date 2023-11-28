@@ -89,7 +89,7 @@ namespace CardsLand_Api.Implementations
             userId = Decrypt(claims.Where(x => x.Type == "userId").ToList().FirstOrDefault().Value);
             userIsAdmin = Decrypt(claims.Where(x => x.Type == "userIsAdmin").ToList().FirstOrDefault().Value);
 
-            if (userIsAdmin == "true")
+            if (userIsAdmin == "True")
                 isAdmin = true;
         }
         public void ObtainClaimsID(IEnumerable<Claim> values, ref string userId)

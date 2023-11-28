@@ -32,6 +32,14 @@ namespace CardsLand_Api.Controllers
 
             try
             {
+                string userTokenId = string.Empty;
+                string userIsAdmin = string.Empty;
+                bool isAdmin = false;
+                _tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
+
+                if (!isAdmin)
+                    return Unauthorized();
+
                 using (var context = _connectionProvider.GetConnection())
                 {
                     var users = await context.QueryAsync<UserEnt>("GetAllUsers", commandType: CommandType.StoredProcedure);
@@ -58,6 +66,14 @@ namespace CardsLand_Api.Controllers
 
             try
             {
+                string userTokenId = string.Empty;
+                string userIsAdmin = string.Empty;
+                bool isAdmin = false;
+                _tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
+
+                if (!isAdmin)
+                    return Unauthorized();
+
                 // Desencripta el valor de userId para obtener UserId
                 string decryptedUserId = _tools.Decrypt(userId);
 
@@ -156,6 +172,14 @@ namespace CardsLand_Api.Controllers
 
             try
             {
+                string userTokenId = string.Empty;
+                string userIsAdmin = string.Empty;
+                bool isAdmin = false;
+                _tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
+
+                if (!isAdmin)
+                    return Unauthorized();
+
                 using (var context = _connectionProvider.GetConnection())
                 {
                     var data = await context.ExecuteAsync("EditSpecificUser",
