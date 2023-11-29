@@ -127,55 +127,48 @@ namespace CardsLand_Api.Controllers
             }
         }
 
-        //[HttpPost]
-        //[Route("RecoverAccount")]
-        //public async Task<IActionResult> RecoverAccount(UserEnt entity)
-        //{
-        //    ApiResponse<string> response = new ApiResponse<string>();
+        [HttpPost]
+        [Route("PwdRecovery")]
+        public async Task<IActionResult> PwdRecovery(UserEnt entity)
+        {
+            ApiResponse<UserEnt> response = new ApiResponse<UserEnt>();
 
-        //    try
-        //    {
-        //        if (string.IsNullOrEmpty(entity.User_Email))
-        //        {
-        //            response.ErrorMessage = "Email is required.";
-        //            response.Code = 400;
-        //            return BadRequest(response);
-        //        }
+            try
+            {
+                if (string.IsNullOrEmpty(entity.User_Email))
+                {
+                    response.ErrorMessage = "Email is required";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
 
-        //        /string temporalPassword = _tools.CreatePassword(8);
+                using (var connection = _connectionProvider.GetConnection())
+                {
+                    var data = await connection.QueryFirstOrDefaultAsync<UserEnt>("PwdRecovery",
+                        new { entity.User_Email },
+                        commandType: CommandType.StoredProcedure);
 
-        //        using (var context = _connectionProvider.GetConnection())
-        //        {
-        //            var data = await context.QueryFirstOrDefaultAsync<UserEnt>("RecoverAccount",
-        //                new { entity.User_Email, TemporalPassword = temporalPassword },
-        //                commandType: CommandType.StoredProcedure);
+                    if (data != null)
+                    {
+                        string contrasennaTemporal = _tools.GenerateRandomCode();
+                        string contenido = _tools.SendEmail(data, contrasennaTemporal);
 
-        //            if (data != null)
-        //            {
-        //                string body = "Your new password to access PokeLand is: " + temporalPassword +
-        //                    "\nPlease log in with your new password and change it.";
-        //                string recipient = entity.User_Email;
-        //                _tools.SendEmail(recipient, "PokeLand Recover Account", body);
+                        context.Execute("ActualizarClaveTemporal",
+                            new { data.IdUsuario, contrasennaTemporal },
+                            commandType: CommandType.StoredProcedure);
 
-        //                response.Success = true;
-        //                response.Code = 200;
-        //                return Ok(response);
-        //            }
-        //            else
-        //            {
-        //                response.ErrorMessage = "Error Sending email";
-        //                response.Code = 500;
-        //                return BadRequest(response);
-        //            }
-        //        }
-        //    }
-        //    catch (SqlException ex)
-        //    {
-        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
-        //        response.Code = 500;
-        //        return BadRequest(response);
-        //    }
-        //}
+                        _utilitarios.EnviarCorreo(datos.correo, "Restaurar Contraseña", contenido);
+                        return Ok(1);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                return BadRequest(response);
+            }
+        }
+
 
         [HttpPut]
         [Route("DisableAccount")]
