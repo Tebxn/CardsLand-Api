@@ -136,5 +136,81 @@ namespace CardsLand_Api.Controllers
                 return BadRequest(response);
             }
         }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("GetSpecificDeck/{deckId}")]
+        public async Task<IActionResult> GetSpecificDeck(string deckId)
+        {
+            ApiResponse<DeckEnt> response = new ApiResponse<DeckEnt>();
+
+            try
+            {
+
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.QueryFirstOrDefaultAsync<DeckEnt>("GetSpecificDeck", 
+                        new { DeckId = deckId}, commandType: CommandType.StoredProcedure);
+
+                    if (data != null)
+                    {
+                        response.Success = true;
+                        response.Data = data;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "User not found";
+                        response.Code = 404;
+                        return NotFound(response);
+                    }
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpGet]
+        [AllowAnonymous]
+        [Route("GetCardsFromDeck/{deckId}")]
+        public async Task<IActionResult> GetCardsFromDeck(string deckId)
+        {
+            ApiResponse<List<CardEnt>> response = new ApiResponse<List<CardEnt>>();
+            try
+            {
+                using (var context = _connectionProvider.GetConnection())
+                {
+
+                    var data = await context.QueryAsync<CardEnt>("GetAllUserDecks",
+                    new { DeckId = deckId }, commandType: CommandType.StoredProcedure);
+
+                    if (data != null)
+                    {
+                        response.Success = true;
+                        response.Data = data.ToList();
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "No data found for the specified deck ID.";
+                        response.Code = 404;
+                        return NotFound(response);
+                    }
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
     }
 }
