@@ -7,6 +7,7 @@ using System.Data.SqlClient;
 using System.Data;
 using Microsoft.AspNetCore.Authorization;
 using CardsLand_Api.Implementations;
+using Org.BouncyCastle.Cms;
 
 namespace CardsLand_Api.Controllers
 {
@@ -16,11 +17,14 @@ namespace CardsLand_Api.Controllers
     {
         private readonly IDbConnectionProvider _connectionProvider;
         private readonly ITools _tools;
+        private readonly IBCryptHelper _bCryptHelper;
 
-        public AuthenticationController(IDbConnectionProvider connectionProvider, ITools tools)
+
+        public AuthenticationController(IDbConnectionProvider connectionProvider, ITools tools, IBCryptHelper bCryptHelper)
         {
             _connectionProvider = connectionProvider;
             _tools = tools;
+            _bCryptHelper = bCryptHelper;
         }
 
         [HttpPost]
@@ -42,7 +46,7 @@ namespace CardsLand_Api.Controllers
                 using (var connection = _connectionProvider.GetConnection())
                 {
                     var data = await connection.QueryFirstOrDefaultAsync<UserEnt>("Login",
-                        new { entity.User_Email},
+                        new { entity.User_Email },
                         commandType: CommandType.StoredProcedure);
 
                     bool passwordIsValid = _tools.CheckPassword(entity.User_Password, data.User_Password);
@@ -76,7 +80,7 @@ namespace CardsLand_Api.Controllers
 
             try
             {
-                if (string.IsNullOrEmpty(entity.User_Nickname) || string.IsNullOrEmpty(entity.User_Password)|| string.IsNullOrEmpty(entity.User_Email))
+                if (string.IsNullOrEmpty(entity.User_Nickname) || string.IsNullOrEmpty(entity.User_Password) || string.IsNullOrEmpty(entity.User_Email))
                 {
                     response.ErrorMessage = "Nickname, email and password are required.";
                     response.Code = 400;
@@ -88,7 +92,7 @@ namespace CardsLand_Api.Controllers
 
                 using (var context = _connectionProvider.GetConnection())
                 {
-                    string body = _tools.MakeHtmlNewUser(entity.User_Nickname, User_Activation_Code);
+                    string body = _tools.MakeHtmlNewUser(entity, User_Activation_Code);
                     string recipient = entity.User_Email;
 
                     bool emailIsSend = _tools.SendEmail(recipient, "CardsLand", body);
@@ -127,55 +131,147 @@ namespace CardsLand_Api.Controllers
             }
         }
 
-        //[HttpPost]
-        //[Route("RecoverAccount")]
-        //public async Task<IActionResult> RecoverAccount(UserEnt entity)
-        //{
-        //    ApiResponse<string> response = new ApiResponse<string>();
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("PwdRecovery")]
+        public async Task<IActionResult> PwdRecovery(UserEnt entity)
+        {
+            ApiResponse<UserEnt> response = new ApiResponse<UserEnt>();
 
-        //    try
-        //    {
-        //        if (string.IsNullOrEmpty(entity.User_Email))
-        //        {
-        //            response.ErrorMessage = "Email is required.";
-        //            response.Code = 400;
-        //            return BadRequest(response);
-        //        }
+            try
+            {
+                if (string.IsNullOrEmpty(entity.User_Email))
+                {
+                    response.ErrorMessage = "Email is required";
+                    response.Code = 400;
+                    return BadRequest(response);
+                }
 
-        //        /string temporalPassword = _tools.CreatePassword(8);
+                using (var connection = _connectionProvider.GetConnection())
+                {
+                    var data = await connection.QueryFirstOrDefaultAsync<UserEnt>("PwdRecovery",
+                        new { entity.User_Email },
+                        commandType: CommandType.StoredProcedure);
 
-        //        using (var context = _connectionProvider.GetConnection())
-        //        {
-        //            var data = await context.QueryFirstOrDefaultAsync<UserEnt>("RecoverAccount",
-        //                new { entity.User_Email, TemporalPassword = temporalPassword },
-        //                commandType: CommandType.StoredProcedure);
 
-        //            if (data != null)
-        //            {
-        //                string body = "Your new password to access PokeLand is: " + temporalPassword +
-        //                    "\nPlease log in with your new password and change it.";
-        //                string recipient = entity.User_Email;
-        //                _tools.SendEmail(recipient, "PokeLand Recover Account", body);
+                    if (data != null)
+                    {
+                        var randomPassword = _tools.GenerateRandomCode(8);
+                        var hashedPassword = _tools.Encrypt(randomPassword);
+                        entity.User_Password = hashedPassword;
 
-        //                response.Success = true;
-        //                response.Code = 200;
-        //                return Ok(response);
-        //            }
-        //            else
-        //            {
-        //                response.ErrorMessage = "Error Sending email";
-        //                response.Code = 500;
-        //                return BadRequest(response);
-        //            }
-        //        }
-        //    }
-        //    catch (SqlException ex)
-        //    {
-        //        response.ErrorMessage = "Unexpected Error: " + ex.Message;
-        //        response.Code = 500;
-        //        return BadRequest(response);
-        //    }
-        //}
+                        string body = _tools.MakeHtmlNewUser(data, randomPassword);
+                        string recipient = entity.User_Email;
+
+                        var updatePass = await connection.ExecuteAsync("UpdateTempPassword",
+                        new { data.User_Id, hashedPassword },
+                        commandType: CommandType.StoredProcedure);
+
+
+                        if (updatePass != 0)
+                        {
+                            bool emailIsSend = _tools.SendEmail(recipient, "CardLand - Restaurar Contraseña", body);
+
+                            if (emailIsSend)
+                            {
+                                response.Success = true;
+                                response.Code = 200;
+                                return Ok(response);
+                            }
+                            else
+                            {
+                                response.ErrorMessage = "Error enviando el correo";
+                                response.Code = 500;
+                                return BadRequest(response);
+                            }
+
+                        }
+                        else
+                        {
+                            response.ErrorMessage = "Error actualizando contraseña";
+                            response.Code = 500;
+                            return BadRequest(response);
+                        }
+
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Correo no valido o usuario inactivo";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPut]
+        [AllowAnonymous]
+        [Route("UpdateNewPassword")]
+        public async Task<IActionResult> UpdateNewPassword(UserEnt entity)
+        {
+            ApiResponse<UserEnt> response = new ApiResponse<UserEnt>();
+
+            try
+            {
+                using (var connection = _connectionProvider.GetConnection())
+                {
+                    entity.User_Id = long.Parse(_tools.Decrypt(entity.SecuredId));
+
+                    var getPass = await connection.QueryFirstOrDefaultAsync<UserEnt>("GetEncryptedPass",
+                         new { entity.User_Id},
+                         commandType: CommandType.StoredProcedure);
+
+                    if(getPass != null)
+                    {
+                        getPass.User_Password = _tools.Decrypt(getPass.User_Password);
+                        if (getPass.User_Password != entity.User_TempPassword)
+                        {
+                            response.ErrorMessage = "La contraseña temporal proporcionada no es valida";
+                            response.Code = 500;
+                            return BadRequest(response);
+                        }
+                        else
+                        {
+                            entity.User_Password = _tools.Encrypt(entity.User_Password);
+
+                            var data = await connection.ExecuteAsync("UpdateNewPassword",
+                                new { entity.User_Id, entity.User_Password },
+                                commandType: CommandType.StoredProcedure);
+
+                            if (data != 0)
+                            {
+                                response.Success = true;
+                                response.Code = 200;
+                                return Ok(response);
+                            }
+                            else
+                            {
+                                response.ErrorMessage = "Error al actualizar su contraseña nueva";
+                                response.Code = 500;
+                                return BadRequest(response);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Error al actualizar su contraseña nueva";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                return BadRequest(response);
+            }
+        }
 
         [HttpPut]
         [Route("DisableAccount")]

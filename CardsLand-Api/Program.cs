@@ -17,6 +17,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddScoped<IPokemonTcg, PokemonTcg>();
 builder.Services.AddScoped<IDbConnectionProvider, DbConnectionProvider>();
 builder.Services.AddScoped<ITools, Tools>();
+builder.Services.AddSingleton<IBCryptHelper, BCryptHelper>();
+
 
 builder.Services.AddSwaggerGen(options => {
     options.AddSecurityDefinition("oauth2", new OpenApiSecurityScheme
