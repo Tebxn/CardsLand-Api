@@ -7,6 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Web;
 
 namespace CardsLand_Api.Implementations
 {
@@ -165,7 +166,9 @@ namespace CardsLand_Api.Implementations
                 string htmlFile = System.IO.File.ReadAllText(fileRoute);
                 htmlFile = htmlFile.Replace("@@Nickname", userData.User_Nickname);
                 htmlFile = htmlFile.Replace("@@TemporalPassword", temporalPassword);
-                htmlFile = htmlFile.Replace("@@Link", "https://localhost:7009/Authentication/UpdateNewPassword?q=" + Encrypt(userData.User_Id.ToString()));
+                string hashedId = Encrypt(userData.User_Id.ToString());
+                string encodedHashedId = HttpUtility.UrlEncode(hashedId);
+                htmlFile = htmlFile.Replace("@@Link", "https://localhost:7009/Authentication/UpdateNewPassword?q=" + encodedHashedId);
 
 
                 return htmlFile;
