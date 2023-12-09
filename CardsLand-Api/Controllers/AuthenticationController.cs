@@ -92,17 +92,18 @@ namespace CardsLand_Api.Controllers
 
                 using (var context = _connectionProvider.GetConnection())
                 {
-                    string body = _tools.MakeHtmlNewUser(entity, User_Activation_Code);
-                    string recipient = entity.User_Email;
+                    var data = await context.QueryFirstOrDefaultAsync("RegisterAccount",
+                    new { entity.User_Nickname, entity.User_Email, entity.User_Password, User_Activation_Code },
+                    commandType: CommandType.StoredProcedure);
 
-                    bool emailIsSend = _tools.SendEmail(recipient, "CardsLand", body);
-                    if (emailIsSend)
+                    if (data != null)
                     {
-                        var data = await context.ExecuteAsync("RegisterAccount",
-                        new { entity.User_Nickname, entity.User_Email, entity.User_Password, User_Activation_Code },
-                        commandType: CommandType.StoredProcedure);
+                        entity.User_Id = data.User_Id;
+                        string body = _tools.MakeHtmlNewUser(entity, User_Activation_Code);
+                        string recipient = entity.User_Email;
 
-                        if (data != 0)
+                        bool emailIsSend = _tools.SendEmail(recipient, "CardsLand", body);
+                        if (emailIsSend)
                         {
                             response.Success = true;
                             response.Code = 200;
@@ -114,10 +115,11 @@ namespace CardsLand_Api.Controllers
                             response.Code = 500;
                             return BadRequest(response);
                         }
+
                     }
                     else
                     {
-                        response.ErrorMessage = "Error Sending activation email";
+                        response.ErrorMessage = "Email already exists";
                         response.Code = 500;
                         return BadRequest(response);
                     }
@@ -160,7 +162,7 @@ namespace CardsLand_Api.Controllers
                         var hashedPassword = _tools.Encrypt(randomPassword);
                         entity.User_Password = hashedPassword;
 
-                        string body = _tools.MakeHtmlNewUser(data, randomPassword);
+                        string body = _tools.MakeHtmlPassRecovery(data, randomPassword);
                         string recipient = entity.User_Email;
 
                         var updatePass = await connection.ExecuteAsync("UpdateTempPassword",
@@ -223,10 +225,10 @@ namespace CardsLand_Api.Controllers
                     entity.User_Id = long.Parse(_tools.Decrypt(entity.SecuredId));
 
                     var getPass = await connection.QueryFirstOrDefaultAsync<UserEnt>("GetEncryptedPass",
-                         new { entity.User_Id},
+                         new { entity.User_Id },
                          commandType: CommandType.StoredProcedure);
 
-                    if(getPass != null)
+                    if (getPass != null)
                     {
                         getPass.User_Password = _tools.Decrypt(getPass.User_Password);
                         if (getPass.User_Password != entity.User_TempPassword)
@@ -274,6 +276,68 @@ namespace CardsLand_Api.Controllers
         }
 
         [HttpPut]
+        [AllowAnonymous]
+        [Route("ActivateAccount")]
+        public async Task<IActionResult> ActivateAccount(UserEnt entity)
+        {
+            ApiResponse<UserEnt> response = new ApiResponse<UserEnt>();
+
+            try
+            {
+                using (var connection = _connectionProvider.GetConnection())
+                {
+                    entity.User_Id = long.Parse(_tools.Decrypt(entity.SecuredId));
+
+                    var getActivationCode = await connection.QueryFirstOrDefaultAsync<UserEnt>("GetActivationCode",
+                         new { entity.User_Id },
+                         commandType: CommandType.StoredProcedure);
+
+                    if (getActivationCode != null)
+                    {
+                        if (getActivationCode.User_Activation_Code != entity.User_Activation_Code)
+                        {
+                            response.ErrorMessage = "El codigo de activacion proporcionado no es valido";
+                            response.Code = 500;
+                            return BadRequest(response);
+                        }
+                        else
+                        {
+
+                            var data = await connection.ExecuteAsync("ActivateAccount",
+                                new { entity.User_Id },
+                                commandType: CommandType.StoredProcedure);
+
+                            if (data != 0)
+                            {
+                                response.Success = true;
+                                response.Code = 200;
+                                return Ok(response);
+                            }
+                            else
+                            {
+                                response.ErrorMessage = "Error al activar su cuenta";
+                                response.Code = 500;
+                                return BadRequest(response);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Error al activar su cuenta";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPut]
         [Route("DisableAccount")]
         public async Task<IActionResult> DisableAccount(UserEnt entity)
         {
@@ -291,40 +355,6 @@ namespace CardsLand_Api.Controllers
                 using (var context = _connectionProvider.GetConnection())
                 {
                     var data = await context.QueryFirstOrDefaultAsync<UserEnt>("DisableAccount",
-                        new { entity.User_Id },
-                        commandType: CommandType.StoredProcedure);
-
-                    response.Success = true;
-                    response.Code = 200;
-                    return Ok(response);
-                }
-            }
-            catch (SqlException ex)
-            {
-                response.ErrorMessage = "Unexpected Error: " + ex.Message;
-                response.Code = 500;
-                return BadRequest(response);
-            }
-        }
-
-        [HttpPut]
-        [Route("ActivateAccount")]
-        public async Task<IActionResult> ActivateAccount(UserEnt entity)
-        {
-            ApiResponse<string> response = new ApiResponse<string>();
-
-            try
-            {
-                if (entity.User_Id == 0)
-                {
-                    response.ErrorMessage = "User_Id can't be empty.";
-                    response.Code = 400;
-                    return BadRequest(response);
-                }
-
-                using (var context = _connectionProvider.GetConnection())
-                {
-                    var data = await context.QueryFirstOrDefaultAsync<UserEnt>("ActivatedAccount",
                         new { entity.User_Id },
                         commandType: CommandType.StoredProcedure);
 

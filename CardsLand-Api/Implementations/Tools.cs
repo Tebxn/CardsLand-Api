@@ -93,6 +93,7 @@ namespace CardsLand_Api.Implementations
             if (userIsAdmin == "True")
                 isAdmin = true;
         }
+
         public void ObtainClaimsID(IEnumerable<Claim> values, ref string userId)
         {
             var claims = values.Select(Claim => new { Claim.Type, Claim.Value }).ToArray();
@@ -158,7 +159,7 @@ namespace CardsLand_Api.Implementations
             }
         }
 
-        public string MakeHtmlNewUser(UserEnt userData, string temporalPassword)
+        public string MakeHtmlPassRecovery(UserEnt userData, string temporalPassword)
         {
             try
             {
@@ -170,6 +171,26 @@ namespace CardsLand_Api.Implementations
                 string encodedHashedId = HttpUtility.UrlEncode(hashedId);
                 htmlFile = htmlFile.Replace("@@Link", "https://localhost:7009/Authentication/UpdateNewPassword?q=" + encodedHashedId);
 
+
+                return htmlFile;
+            }
+            catch (Exception ex)
+            {
+                return "Error";
+            }
+        }
+
+        public string MakeHtmlNewUser(UserEnt userData, string activationCode)
+        {
+            try
+            {
+                string fileRoute = Path.Combine(_hostingEnvironment.ContentRootPath, "HtmlTemplates\\activationCode.html");
+                string htmlFile = System.IO.File.ReadAllText(fileRoute);
+                htmlFile = htmlFile.Replace("@@nickname", userData.User_Nickname);
+                htmlFile = htmlFile.Replace("@@activationCode", activationCode);
+                string hashedId = Encrypt(userData.User_Id.ToString());
+                string encodedHashedId = HttpUtility.UrlEncode(hashedId);
+                htmlFile = htmlFile.Replace("@@Link", "https://localhost:7009/Authentication/ActivateAccount?q=" + encodedHashedId);
 
                 return htmlFile;
             }

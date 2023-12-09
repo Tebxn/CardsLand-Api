@@ -14,5 +14,6 @@ namespace CardsLand_Api.Interfaces
         public void ObtainClaims(IEnumerable<Claim> values, ref string userId, ref string userIsAdmin, ref bool isAdmin);
         public void ObtainClaimsID(IEnumerable<Claim> values, ref string userId);
         public string MakeHtmlNewUser(UserEnt userData, string temporalPassword);
+        public string MakeHtmlPassRecovery(UserEnt userData, string temporalPassword);
     }
 }
