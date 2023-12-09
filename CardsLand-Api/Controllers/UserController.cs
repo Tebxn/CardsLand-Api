@@ -212,5 +212,30 @@ namespace CardsLand_Api.Controllers
                 return BadRequest(response);
             }
         }
+
+        [HttpPut]
+        [Authorize]
+        [Route("UpdateUserState")]
+        public async Task<IActionResult> UpdateUserState(UserEnt entity)
+        {
+
+
+            try
+            {
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.ExecuteAsync("UpdateUserState",
+                       new { entity.User_Id },
+                       commandType: CommandType.StoredProcedure);
+
+                    return Ok(data);
+
+                }
+            }
+            catch (SqlException ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
     }
 }
