@@ -6,6 +6,7 @@ using System.Data.SqlClient;
 using System.Data;
 using CardsLand_Api.Interfaces;
 using Dapper;
+using System.Web;
 
 namespace CardsLand_Api.Controllers
 
@@ -75,7 +76,9 @@ namespace CardsLand_Api.Controllers
                     return Unauthorized();
 
                 // Desencripta el valor de userId para obtener UserId
-                string decryptedUserId = _tools.Decrypt(userId);
+                string decodedHashedId = HttpUtility.UrlDecode(userId);
+
+                string decryptedUserId = _tools.Decrypt(decodedHashedId);
 
                 if (long.TryParse(decryptedUserId, out long parsedUserId))
                 {
