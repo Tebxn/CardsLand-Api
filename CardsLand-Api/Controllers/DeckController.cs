@@ -95,24 +95,23 @@ namespace CardsLand_Api.Controllers
                 return BadRequest(response);
             }
         }
+
         [HttpDelete]
         [Authorize]
-        [Route("DeleteDeck")]
-        public async Task<IActionResult> DeleteDeck(DeckEnt entity)
+        [Route("DeleteDeck/{deckId}")]
+        public async Task<IActionResult> DeleteDeck(long deckId)
         {
             ApiResponse<string> response = new ApiResponse<string>();
-
             try
             {
                 using (var context = _connectionProvider.GetConnection())
                 {
-
                     var data = await context.ExecuteAsync("DeleteDeck",
-                    new
-                    {
-                        Deck_Id = entity.Deck_Id
-                    },
-                    commandType: CommandType.StoredProcedure);
+                        new
+                        {
+                            Deck_Id = deckId
+                        },
+                        commandType: CommandType.StoredProcedure);
 
                     if (data != 0)
                     {
@@ -127,7 +126,6 @@ namespace CardsLand_Api.Controllers
                         return BadRequest(response);
                     }
                 }
-
             }
             catch (SqlException ex)
             {
@@ -136,6 +134,48 @@ namespace CardsLand_Api.Controllers
                 return BadRequest(response);
             }
         }
+        [HttpDelete]
+        [Authorize]
+        [Route("DeleteCardFromDeck")]
+        public async Task<IActionResult> DeleteCardFromDeck(long deckId, string cardId)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+            try
+            {
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    var data = await context.ExecuteAsync("DeleteCardFromDeck",
+                        new
+                        {
+                            Deck_Id = deckId,
+                            Card_Id = cardId
+                        },
+                        commandType: CommandType.StoredProcedure);
+
+                    if (data != 0)
+                    {
+                        response.Success = true;
+                        response.Code = 200;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Server Error";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
+
+
 
         [HttpGet]
         [Authorize]
