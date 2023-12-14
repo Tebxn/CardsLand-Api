@@ -186,7 +186,7 @@ namespace CardsLand_Api.Controllers
                 using (var context = _connectionProvider.GetConnection())
                 {
 
-                    var data = await context.QueryAsync<CardEnt>("GetAllUserDecks",
+                    var data = await context.QueryAsync<CardEnt>("GetCardsFromDeck",
                     new { DeckId = deckId }, commandType: CommandType.StoredProcedure);
 
                     if (data != null)
@@ -197,8 +197,10 @@ namespace CardsLand_Api.Controllers
                     }
                     else
                     {
+                        response.Success = true;
+                        response.Data = data.ToList();
                         response.ErrorMessage = "No data found for the specified deck ID.";
-                        response.Code = 404;
+                        response.Code = 505;
                         return NotFound(response);
                     }
                 }
@@ -211,6 +213,91 @@ namespace CardsLand_Api.Controllers
                 return BadRequest(response);
             }
         }
+        [HttpPut]
+        [Authorize]
+        [Route("EditDeckValues")]
+        public async Task<IActionResult> EditDeckValues(DeckEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
 
+            try
+            {
+                using (var context = _connectionProvider.GetConnection())
+                {
+
+                    var data = await context.ExecuteAsync("EditDeckValues",
+                    new
+                    {
+                        Deck_Id = entity.Deck_Id,
+                        Deck_Name = entity.Deck_Name,
+                        Deck_Description = entity.Deck_Description,
+                        Deck_Image_Url = entity.Deck_Background_Image
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                    if (data != 0)
+                    {
+                        response.Success = true;
+                        response.Code = 200;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Error updating deck";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
+
+        [HttpPost]
+        [Authorize]
+        [Route("AddCardToDeck")]
+        public async Task<IActionResult> AddCardToDeck(CardDeckEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+            try
+            {
+                using (var context = _connectionProvider.GetConnection())
+                {
+
+                    var data = await context.ExecuteAsync("AddCardToDeck",
+                    new
+                    {
+                        Deck_Id = entity.DeckId,
+                        Card_Id = entity.CardId
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                    if (data != 0)
+                    {
+                        response.Success = true;
+                        response.Code = 200;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Email already exists";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
+            }
+        }
     }
 }
