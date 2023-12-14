@@ -221,7 +221,7 @@ namespace CardsLand_Api.Controllers
         [Route("UpdateUserState")]
         public async Task<IActionResult> UpdateUserState(UserEnt entity)
         {
-
+            ApiResponse<UserEnt> response = new ApiResponse<UserEnt>();
 
             try
             {
@@ -231,7 +231,9 @@ namespace CardsLand_Api.Controllers
                        new { entity.User_Id },
                        commandType: CommandType.StoredProcedure);
 
-                    return Ok(data);
+                    response.Success = true;
+                    response.Code = 200;
+                    return Ok(response);
 
                 }
             }
