@@ -8,19 +8,23 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Web;
+using static Dapper.SqlMapper;
+using System.Data;
 
 namespace CardsLand_Api.Implementations
 {
     public class Tools : ITools
     {
         private readonly IConfiguration _configuration;
+        private readonly IDbConnectionProvider _connectionProvider;
 
         private IHostEnvironment _hostingEnvironment;
 
-        public Tools(IConfiguration configuration, IHostEnvironment hostingEnvironment)
+        public Tools(IConfiguration configuration, IHostEnvironment hostingEnvironment, IDbConnectionProvider connectionProvider)
         {
             _configuration = configuration;
             _hostingEnvironment = hostingEnvironment;
+            _connectionProvider = connectionProvider;
         }
 
         public string GenerateRandomCode(int length)
@@ -209,6 +213,21 @@ namespace CardsLand_Api.Implementations
             var unHashedPassword = Decrypt(hashedPassword);
             bool validPassword = password == unHashedPassword ? true : false;
             return validPassword;
+        }
+
+        public async Task AddError(string errorMessage)
+        {
+            using (var context = _connectionProvider.GetConnection())
+            {
+                DateTime dateTime = DateTime.Now;
+                var data = await context.ExecuteAsync("AddError",
+                new
+                {
+                    ErrorDate = dateTime,
+                    ErrorMessage = errorMessage
+                },
+                commandType: CommandType.StoredProcedure);
+            }
         }
     }
 }

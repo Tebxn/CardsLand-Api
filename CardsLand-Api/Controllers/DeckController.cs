@@ -45,6 +45,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -90,6 +91,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -129,6 +131,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -168,6 +171,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -209,6 +213,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -248,6 +253,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -292,6 +298,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -334,6 +341,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);

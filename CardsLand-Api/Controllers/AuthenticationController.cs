@@ -36,6 +36,8 @@ namespace CardsLand_Api.Controllers
 
             try
             {
+                bool passwordIsValid = false;
+
                 if (string.IsNullOrEmpty(entity.User_Email) || string.IsNullOrEmpty(entity.User_Password))
                 {
                     response.ErrorMessage = "Email and password are required";
@@ -49,23 +51,31 @@ namespace CardsLand_Api.Controllers
                         new { entity.User_Email },
                         commandType: CommandType.StoredProcedure);
 
-                    bool passwordIsValid = _tools.CheckPassword(entity.User_Password, data.User_Password);
-                    if (data == null || !passwordIsValid)
+                    if (data != null) 
                     {
-                        response.ErrorMessage = "Incorrect email or password";
-                        response.Code = 404;
-                        return NotFound(response);
+                        passwordIsValid = _tools.CheckPassword(entity.User_Password, data.User_Password);
+
+                        if (!passwordIsValid)
+                        {
+                            response.ErrorMessage = "Incorrect email or password";
+                            response.Code = 404;
+                            return NotFound(response);
+                        }
+                        response.Success = true;
+                        response.Code = 200;
+                        response.Data = data;
+                        response.Data.User_Password = "";
+                        response.Data.UserToken = _tools.GenerateToken(data.User_Id.ToString(), data.User_IsAdmin.ToString());
+                        return Ok(response);
                     }
-                    response.Success = true;
-                    response.Code = 200;
-                    response.Data = data;
-                    response.Data.User_Password = "";
-                    response.Data.UserToken = _tools.GenerateToken(data.User_Id.ToString(), data.User_IsAdmin.ToString());
-                    return Ok(response);
+                    response.ErrorMessage = "Incorrect email or password";
+                    response.Code = 404;
+                    return NotFound(response);
                 }
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 return BadRequest(response);
             }
@@ -127,6 +137,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -206,6 +217,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 return BadRequest(response);
             }
@@ -270,6 +282,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 return BadRequest(response);
             }
@@ -332,6 +345,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 return BadRequest(response);
             }
@@ -365,6 +379,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);

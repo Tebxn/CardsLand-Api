@@ -52,6 +52,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -109,6 +110,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -160,6 +162,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -210,6 +213,7 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 response.ErrorMessage = "Unexpected Error: " + ex.Message;
                 response.Code = 500;
                 return BadRequest(response);
@@ -239,7 +243,52 @@ namespace CardsLand_Api.Controllers
             }
             catch (SqlException ex)
             {
+                await _tools.AddError(ex.Message);
                 return BadRequest(ex.Message);
+            }
+        }
+
+        [HttpPost]
+        [AllowAnonymous]
+        [Route("AddError")]
+        public async Task<IActionResult> AddError(ErrorEnt entity)
+        {
+            ApiResponse<string> response = new ApiResponse<string>();
+
+            try
+            {
+                using (var context = _connectionProvider.GetConnection())
+                {
+                    DateTime dateTime = DateTime.Now;
+                    var data = await context.ExecuteAsync("AddError",
+                    new
+                    {
+                        ErrorDate = dateTime,
+                        ErrorMessage = entity.ErrorMessage
+                    },
+                    commandType: CommandType.StoredProcedure);
+
+                    if (data != 0)
+                    {
+                        response.Success = true;
+                        response.Code = 200;
+                        return Ok(response);
+                    }
+                    else
+                    {
+                        response.ErrorMessage = "Error Adding Error Log";
+                        response.Code = 500;
+                        return BadRequest(response);
+                    }
+                }
+
+            }
+            catch (SqlException ex)
+            {
+                await _tools.AddError(ex.Message);
+                response.ErrorMessage = "Unexpected Error: " + ex.Message;
+                response.Code = 500;
+                return BadRequest(response);
             }
         }
     }
