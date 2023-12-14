@@ -138,7 +138,7 @@ namespace CardsLand_Api.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous]
+        [Authorize]
         [Route("GetSpecificDeck/{deckId}")]
         public async Task<IActionResult> GetSpecificDeck(string deckId)
         {
@@ -176,7 +176,7 @@ namespace CardsLand_Api.Controllers
         }
 
         [HttpGet]
-        [AllowAnonymous]
+        [Authorize]
         [Route("GetCardsFromDeck/{deckId}")]
         public async Task<IActionResult> GetCardsFromDeck(string deckId)
         {
