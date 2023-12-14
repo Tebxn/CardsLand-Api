@@ -69,11 +69,11 @@ namespace CardsLand_Api.Controllers
             {
                 string userTokenId = string.Empty;
                 string userIsAdmin = string.Empty;
-                bool isAdmin = false;
-                _tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
+                //bool isAdmin = false;
+                //_tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
 
-                if (!isAdmin)
-                    return Unauthorized();
+                //if (!isAdmin)
+                //    return Unauthorized();
 
                 // Desencripta el valor de userId para obtener UserId
                 string decodedHashedId = HttpUtility.UrlDecode(userId);
@@ -177,11 +177,11 @@ namespace CardsLand_Api.Controllers
             {
                 string userTokenId = string.Empty;
                 string userIsAdmin = string.Empty;
-                bool isAdmin = false;
-                _tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
+                //bool isAdmin = false;
+                //_tools.ObtainClaims(User.Claims, ref userTokenId, ref userIsAdmin, ref isAdmin);
 
-                if (!isAdmin)
-                    return Unauthorized();
+                //if (!isAdmin)
+                //    return Unauthorized();
 
                 using (var context = _connectionProvider.GetConnection())
                 {
